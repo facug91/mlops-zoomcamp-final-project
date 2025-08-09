@@ -1,0 +1,50 @@
+FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
+
+# Prevent interactive prompts
+ENV DEBIAN_FRONTEND=noninteractive
+ENV TZ=Etc/UTC
+
+# Install system packages
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    curl \
+    git \
+    openssh-server \
+    python3 \
+    python3-pip \
+    python3-venv \
+    python3-dev \
+    sudo \
+    unzip \
+    wget \
+    && rm -rf /var/lib/apt/lists/*
+
+# Create virtual environment and install Python packages
+ENV VENV_PATH=/opt/venv
+RUN python3 -m venv $VENV_PATH
+ENV PATH="$VENV_PATH/bin:$PATH"
+
+# Copy requirements and install
+COPY requirements-dev.txt requirements.txt
+RUN pip install --upgrade pip && pip install -r requirements.txt
+
+# Configure SSH
+RUN mkdir /var/run/sshd && \
+    echo "PermitRootLogin yes" >> /etc/ssh/sshd_config && \
+    echo "PasswordAuthentication yes" >> /etc/ssh/sshd_config && \
+    echo "PermitEmptyPasswords no" >> /etc/ssh/sshd_config
+
+# Set working directory and assign ownership
+WORKDIR /root/workspace
+
+# Set Root Password
+RUN echo 'root:root' | chpasswd
+
+# Expose SSH and Jupyter ports
+EXPOSE 22 8888
+
+# Configure prefect server url
+RUN prefect config set PREFECT_API_URL=${PREFECT_API_URL}
+
+# Start SSH and Jupyter notebook
+CMD ["/bin/bash", "-c", "service ssh start && exec jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token=''"]

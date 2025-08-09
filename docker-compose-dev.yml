@@ -1,0 +1,97 @@
+services:
+  localstack:
+    image: localstack/localstack:3
+    container_name: localstack
+    environment:
+      - SERVICES=s3
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_ACCESS_KEY_ID=LSIAQAAAAAAVNCBMPNSG
+      - AWS_SECRET_ACCESS_KEY=LSIAQAAAAAAVNCBMPNSG
+      - PERSISTENCE=1
+    ports:
+      - "4566:4566"
+    volumes:
+      - ./localstack:/var/lib/localstack
+      - /var/run/docker.sock:/var/run/docker.sock
+
+  mlflow:
+    build:
+      context: .
+      dockerfile: Dockerfile-mlflow
+    container_name: mlflow-server
+    environment:
+      - MLFLOW_S3_ENDPOINT_URL=http://localstack:4566
+      - AWS_ACCESS_KEY_ID=LSIAQAAAAAAVNCBMPNSG
+      - AWS_SECRET_ACCESS_KEY=LSIAQAAAAAAVNCBMPNSG
+    volumes:
+      - ./mlflow:/mlruns
+    ports:
+      - "5000:5000"
+    depends_on:
+      - localstack
+    command: ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "sqlite:////mlruns/mlruns.db", "--serve-artifacts","--default-artifact-root", "s3://mlflow-artifacts", "--artifacts-destination", "s3://mlflow-artifacts"]
+
+  prefect:
+    image: prefecthq/prefect:3.4.9-python3.12
+    container_name: prefect-server
+    ports:
+      - "4200:4200"
+    volumes:
+      - ./prefect:/root/.prefect
+    environment:
+      - PREFECT_API_URL=http://localhost:4200/api
+      - PREFECT_API_DATABASE_CONNECTION_URL=sqlite+aiosqlite:////root/.prefect/prefect.db
+      - PREFECT_SERVER_UI_ENABLED=true
+      - PREFECT_SERVER_API_HOST=0.0.0.0
+      - PREFECT_API_SERVICES_FLOW_RUN_NOTIFICATIONS_ENABLED=false
+    command: ["prefect", "server", "start"]
+
+  db:
+    image: postgres:latest
+    container_name: postgres
+    environment:
+      - POSTGRES_USER=user
+      - POSTGRES_PASSWORD=123456
+      - POSTGRES_DB=metricsdb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./pgdata:/var/lib/postgresql/data
+
+  adminer:
+    image: adminer:latest
+    container_name: adminer
+    ports:
+      - "8081:8080"
+    depends_on:
+      - db
+
+  ml-env:
+    build:
+      context: .
+      dockerfile: Dockerfile-dev
+    container_name: ml-env
+    shm_size: '10gb'
+    ports:
+      - "8888:8888"    # Jupyter
+      - "2222:22"      # SSH
+      - "8080:8080"    # Web Service
+    restart: unless-stopped
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ./workspace:/root/workspace
+    environment:
+      - AWS_ACCESS_KEY_ID=LSIAQAAAAAAVNCBMPNSG
+      - AWS_SECRET_ACCESS_KEY=LSIAQAAAAAAVNCBMPNSG
+      - AWS_DEFAULT_REGION=us-east-1
+      - MLFLOW_S3_ENDPOINT_URL=http://localstack:4566
+      - TORCH_HOME=/root/workspace/torchvision/cache # torchvision cache folder for pre-trained models
+      - PREFECT_API_URL=http://prefect:4200/api
+
