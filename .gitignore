@@ -209,7 +209,8 @@ __marimo__/
 
 
 # Local paths
-localstack/
+.env
+minio/
 mlflow/
 prefect/
 pgdata/
