@@ -207,9 +207,9 @@ marimo/_lsp/
 __marimo__/
 
 
-
 # Local paths
 .env
+.bash_history
 minio/
 mlflow/
 prefect/
