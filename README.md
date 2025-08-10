@@ -1,8 +1,12 @@
+
+
 # MLOps Zoomcamp Final Project 2025
 
 This repository contains the final project for the [MLOps Zoomcamp](https://github.com/DataTalksClub/mlops-zoomcamp)
 
-## Project description
+## Project: Fruits Classification
+
+![Fruits example](./images/fruit_banner.png)
 
 ### Problem description
 
