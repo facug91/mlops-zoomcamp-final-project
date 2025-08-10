@@ -206,8 +206,8 @@ def train_model(model, model_name, device, dataloaders, num_epochs=10):
 
     model = torch.load('models/best-model.pth', weights_only=False)
     os.remove('models/best-model.pth')
-    torch.save(model.state_dict(), "models/resnet50_weights.pth")
-    mlflow.pytorch.log_model(model, artifact_path="models", registered_model_name="fruits-classifier-resnet50")
+    torch.save(model.state_dict(), f"models/{model_name}_weights.pth")
+    mlflow.pytorch.log_model(model, artifact_path="models", registered_model_name=f"fruits-classifier-{model_name}")
 
     return model
 

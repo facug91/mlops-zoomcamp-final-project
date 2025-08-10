@@ -209,6 +209,7 @@ __marimo__/
 
 # Local paths
 .env
+workspace/.env
 .bash_history
 minio/
 mlflow/
