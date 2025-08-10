@@ -1,10 +1,10 @@
 import boto3
+import datetime
 import io
 import psycopg2
 import os
 import uuid
 
-from datetime import datetime
 from PIL import Image
 from typing import List, Tuple
 
@@ -69,7 +69,7 @@ class PredictionLogger:
             image_path (str): S3 path of the processed image.
         """
 
-        timestamp = datetime.utcnow()
+        timestamp = datetime.datetime.now(datetime.UTC)
         exec_time_ms = int(duration * 1000.0)
         confidence_dict = {label.lower(): confidence for label, confidence in predictions}
 
