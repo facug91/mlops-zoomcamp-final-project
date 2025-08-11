@@ -1,20 +1,18 @@
-import boto3
 import datetime
 import io
-import psycopg2
 import os
-import uuid
-
-from PIL import Image
 from typing import List, Tuple
 
+import boto3
+import psycopg2
+from PIL import Image
 
 db_config = {
     "host": os.getenv("DB_HOST"),
     "port": os.getenv("DB_PORT"),
     "dbname": os.getenv("DB_NAME"),
     "user": os.getenv("DB_USER"),
-    "password": os.getenv("DB_PASSWORD")
+    "password": os.getenv("DB_PASSWORD"),
 }
 
 s3_config = {
@@ -22,8 +20,9 @@ s3_config = {
     "access_key": os.getenv("AWS_ACCESS_KEY_ID"),
     "secret_key": os.getenv("AWS_SECRET_ACCESS_KEY"),
     "region": os.getenv("AWS_DEFAULT_REGION"),
-    "bucket": os.getenv("S3_BUCKET")
+    "bucket": os.getenv("S3_BUCKET"),
 }
+
 
 class PredictionLogger:
     """
@@ -52,12 +51,11 @@ class PredictionLogger:
                 strawberry FLOAT
             )
             """
-        
+
         with psycopg2.connect(**self.db_config) as conn:
             with conn.cursor() as cur:
                 cur.execute(create_table_statement)
                 conn.commit()
-
 
     def save_to_db(self, predictions: List[Tuple[str, float]], duration: float, image_path: str):
         """
@@ -76,8 +74,8 @@ class PredictionLogger:
         columns = ["timestamp", "exec_time_ms", "image_path"] + list(confidence_dict.keys())
         values = [timestamp, exec_time_ms, image_path] + list(confidence_dict.values())
 
-        placeholders = ', '.join(['%s'] * len(values))
-        columns_str = ', '.join(columns)
+        placeholders = ", ".join(["%s"] * len(values))
+        columns_str = ", ".join(columns)
 
         insert_statement = f"INSERT INTO predictions ({columns_str}) VALUES ({placeholders})"
 
@@ -89,8 +87,7 @@ class PredictionLogger:
             print(f"Database insert failed: {e}")
             raise
 
-
-    def upload_image_to_s3(self, image: Image.Image, run_id: str = uuid.uuid4().hex) -> str:
+    def upload_image_to_s3(self, image: Image.Image, run_id: str) -> str:
         """
         Uploads the image to an S3 bucket and returns the image path.
 
@@ -102,7 +99,7 @@ class PredictionLogger:
             str: The S3 path of the uploaded image.
         """
         buffer = io.BytesIO()
-        image.save(buffer, format='JPEG')
+        image.save(buffer, format="JPEG")
         buffer.seek(0)
 
         s3_key = f"predictions/{run_id}.jpg"
@@ -112,10 +109,9 @@ class PredictionLogger:
             endpoint_url=self.s3_config["endpoint_url"],
             aws_access_key_id=self.s3_config["access_key"],
             aws_secret_access_key=self.s3_config["secret_key"],
-            region_name=self.s3_config["region"]
+            region_name=self.s3_config["region"],
         )
 
         s3.upload_fileobj(buffer, self.s3_config["bucket"], s3_key, ExtraArgs={"ContentType": "image/jpeg"})
 
         return f"s3://{self.s3_config['bucket']}/{s3_key}"
-

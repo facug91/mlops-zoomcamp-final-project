@@ -1,21 +1,20 @@
 import json
-import mlflow
-import mlflow.pytorch
+import os
 import sys
 import time
+
+import mlflow.pytorch
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
 import torch.optim as optim
-import os
-
-from prefect import flow, task
 from sklearn.metrics import classification_report
-from torchvision import datasets, models, transforms
-from torchvision.models import resnet50, ResNet50_Weights, mobilenet_v3_small, MobileNet_V3_Small_Weights
 from torch.utils.data import DataLoader
+from torchvision import datasets, transforms
+from torchvision.models import MobileNet_V3_Small_Weights, ResNet50_Weights, mobilenet_v3_small, resnet50
 from tqdm import tqdm
 
+import mlflow
+from prefect import flow, task
 
 MLFLOW_URL = "http://mlflow:5000"
 MLFLOW_EXPERIMENT = "fruits-classifier"
@@ -28,7 +27,7 @@ def configure_mlflow():
     mlflow.set_experiment("fruits-classifier")
 
 
-# @task(log_prints=True)
+@task(log_prints=True)
 def get_data_loaders(data_dir: str):
 
     print("Creating data loaders with dataset ", data_dir)
@@ -39,38 +38,43 @@ def get_data_loaders(data_dir: str):
     batch_size = 64
 
     data_transforms = {
-        "train": transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.RandomRotation(degrees=15),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
-        ]),
-        "val": transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
-        ]),
-        "test": transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
-        ]),
+        "train": transforms.Compose(
+            [
+                transforms.Resize((input_size, input_size)),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+                transforms.RandomRotation(degrees=15),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ]
+        ),
+        "val": transforms.Compose(
+            [
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ]
+        ),
+        "test": transforms.Compose(
+            [
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ]
+        ),
     }
 
     image_datasets = {
-        x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x])
-        for x in ["train", "val", "test"]
+        x: datasets.ImageFolder(os.path.join(data_dir, x), data_transforms[x]) for x in ["train", "val", "test"]
     }
 
     dataloaders = {
@@ -85,7 +89,8 @@ def get_data_loaders(data_dir: str):
 
     return (dataloaders, class_names, num_classes)
 
-# @task(log_prints=True)
+
+@task(log_prints=True)
 def initialize_model(model_name, num_classes):
     mlflow.log_param("model_name", model_name)
 
@@ -102,7 +107,7 @@ def initialize_model(model_name, num_classes):
             nn.Linear(model.fc.in_features, 256),
             nn.ReLU(),
             nn.Dropout(0.4),
-            nn.Linear(256, num_classes)
+            nn.Linear(256, num_classes),
         )
     elif model_name == "mobilenet_v3_small":
         weights = MobileNet_V3_Small_Weights.IMAGENET1K_V1
@@ -117,7 +122,7 @@ def initialize_model(model_name, num_classes):
             nn.Linear(in_features, 256),
             nn.ReLU(),
             nn.Dropout(0.4),
-            nn.Linear(256, num_classes)
+            nn.Linear(256, num_classes),
         )
         for param in model.classifier[3].parameters():
             param.requires_grad = True
@@ -128,7 +133,7 @@ def initialize_model(model_name, num_classes):
     return model
 
 
-# @task(log_prints=True)
+@task(log_prints=True)
 def train_model(model, model_name, device, dataloaders, num_epochs=10):
 
     print("Training begin")
@@ -184,10 +189,12 @@ def train_model(model, model_name, device, dataloaders, num_epochs=10):
                 running_corrects += torch.sum(preds == labels.data)
 
                 # Update tqdm description dynamically
-                loop.set_postfix({
-                    "Loss": f"{loss.item():.4f}",
-                    "Batch Acc": f"{(preds == labels).float().mean().item():.4f}"
-                })
+                loop.set_postfix(
+                    {
+                        "Loss": f"{loss.item():.4f}",
+                        "Batch Acc": f"{(preds == labels).float().mean().item():.4f}",
+                    }
+                )
 
             epoch_loss = running_loss / len(dataloaders[phase].dataset)
             epoch_acc = running_corrects.double() / len(dataloaders[phase].dataset)
@@ -200,19 +207,19 @@ def train_model(model, model_name, device, dataloaders, num_epochs=10):
             # Save the best model
             if phase == "val" and epoch_acc > best_acc:
                 best_acc = epoch_acc
-                torch.save(model, 'models/best-model.pth')
+                torch.save(model, "models/best-model.pth")
 
     print(f"\nBest Validation Accuracy: {best_acc:.4f}")
 
-    model = torch.load('models/best-model.pth', weights_only=False)
-    os.remove('models/best-model.pth')
+    model = torch.load("models/best-model.pth", weights_only=False)
+    os.remove("models/best-model.pth")
     torch.save(model.state_dict(), f"models/{model_name}_weights.pth")
     mlflow.pytorch.log_model(model, artifact_path="models", registered_model_name=f"fruits-classifier-{model_name}")
 
     return model
 
 
-# @task(log_prints=True)
+@task(log_prints=True)
 def eval(model, device, dataloaders, class_names):
 
     print("Evaluating best model with test data.")
@@ -228,7 +235,7 @@ def eval(model, device, dataloaders, class_names):
             start_time = time.time()
             inputs = inputs.to(device)
             labels = labels.to(device)
-            outputs = model(inputs).to('cpu')
+            outputs = model(inputs).to("cpu")
             _, preds = torch.max(outputs, 1)
             end_time = time.time()
             execution_time = end_time - start_time
@@ -242,12 +249,14 @@ def eval(model, device, dataloaders, class_names):
     report = classification_report(all_labels, all_preds, target_names=class_names, output_dict=True)
 
     for label, metrics in report.items():
+        label = label.replace(" ", "_").replace("-", "_")
         if isinstance(metrics, dict):
             for metric_name, value in metrics.items():
-                mlflow.log_metric(f"{label.replace(' ', '_').replace('-', '_')}_{metric_name.replace(' ', '_').replace('-', '_')}", value)
+                metric_name = metric_name.replace(" ", "_").replace("-", "_")
+                mlflow.log_metric(f"{label}_{metric_name}", value)
         else:
-            mlflow.log_metric(f"{label.replace(' ', '_').replace('-', '_')}", metrics)
-    mlflow.log_metric(f"avg_execution_time_ms", avg_execution_time_ms)
+            mlflow.log_metric(label, metrics)
+    mlflow.log_metric("avg_execution_time_ms", avg_execution_time_ms)
 
     with open("metrics/classification_report.json", "w") as f:
         json.dump(report, f, indent=4)
@@ -260,22 +269,22 @@ def eval(model, device, dataloaders, class_names):
     print(report)
 
 
-# @flow(log_prints=True)
+@flow(log_prints=True)
 def training_flow(model_name="mobilenet_v3_small"):
 
     print("Executing training flow")
 
     configure_mlflow()
 
-    data_dir="./data/fruits_dataset"
-    
-    with mlflow.start_run() as run:
-        
+    data_dir = "./data/fruits_dataset"
+
+    with mlflow.start_run():
+
         mlflow.set_tag("Data Scientist", "Facundo Galán")
 
         device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print("Device :", device)
-        
+
         mlflow.log_param("device", device)
 
         dataloaders, class_names, num_classes = get_data_loaders(data_dir)

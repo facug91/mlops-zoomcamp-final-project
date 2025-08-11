@@ -1,10 +1,10 @@
-import torch
-import numpy as np
-
-import torch.nn as nn
-from torchvision import models, transforms
-from PIL import Image
 from typing import List, Tuple
+
+import numpy as np
+import torch
+import torch.nn as nn
+from PIL import Image
+from torchvision import models, transforms
 
 
 class ModelService:
@@ -23,18 +23,18 @@ class ModelService:
         """
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         input_size = 224
-        self.transform = transforms.Compose([
-            transforms.Resize((input_size, input_size)),
-            transforms.ToTensor(),
-            transforms.Normalize(
-                mean=[0.485, 0.456, 0.406],
-                std=[0.229, 0.224, 0.225]
-            )
-        ])
-        self.class_index = class_index or {
-            0: "Apple", 1: "Banana", 2: "Grape", 3: "Mango", 4: "Strawberry"
-        }
-        if model_name is not None: # Useful for unit tests
+        self.transform = transforms.Compose(
+            [
+                transforms.Resize((input_size, input_size)),
+                transforms.ToTensor(),
+                transforms.Normalize(
+                    mean=[0.485, 0.456, 0.406],
+                    std=[0.229, 0.224, 0.225],
+                ),
+            ]
+        )
+        self.class_index = class_index or {0: "Apple", 1: "Banana", 2: "Grape", 3: "Mango", 4: "Strawberry"}
+        if model_name is not None:  # Useful for unit tests
             self.model_name = model_name
             self.model_path = f"/root/workspace/models/{model_name}_weights.pth"
             self.model = self._load_model()
@@ -53,7 +53,7 @@ class ModelService:
                 nn.Linear(in_features, 256),
                 nn.ReLU(),
                 nn.Dropout(0.4),
-                nn.Linear(256, len(self.class_index))
+                nn.Linear(256, len(self.class_index)),
             )
         else:
             model = models.resnet50()
@@ -61,7 +61,7 @@ class ModelService:
                 nn.Linear(model.fc.in_features, 256),
                 nn.ReLU(),
                 nn.Dropout(0.4),
-                nn.Linear(256, len(self.class_index))
+                nn.Linear(256, len(self.class_index)),
             )
         model.load_state_dict(torch.load(self.model_path, map_location=self.device))
         model.to(self.device)
@@ -80,7 +80,7 @@ class ModelService:
         """
         image = image.convert("RGB")
         return self.transform(image).unsqueeze(0).to(self.device)
-    
+
     def process(self, input_tensor: torch.Tensor) -> torch.Tensor:
         """
         Perform inference on the input tensor.
@@ -95,7 +95,7 @@ class ModelService:
             outputs = self.model(input_tensor)
             probabilities = torch.nn.functional.softmax(outputs[0], dim=0)
         return probabilities
-    
+
     def postprocess(self, output_tensor: torch.Tensor) -> List[Tuple[str, float]]:
         """
         Convert model output tensor into sorted class labels with probabilities.

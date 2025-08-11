@@ -1,7 +1,8 @@
 import io
 import uuid
+from unittest.mock import MagicMock, patch
+
 import pytest
-from unittest.mock import patch, MagicMock
 from PIL import Image
 from services.prediction_logger import PredictionLogger
 
@@ -30,7 +31,7 @@ def test_prepare_db_executes_create_table(mock_connect):
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
 
     # Instantiating PredictionLogger automatically calls prepare_db()
-    logger = PredictionLogger()
+    _ = PredictionLogger()
 
     # Ensure CREATE TABLE was called exactly once
     assert mock_cursor.execute.call_count == 1
@@ -66,7 +67,7 @@ def test_save_to_db_inserts_correct_values(mock_connect):
     sql, params = mock_cursor.execute.call_args[0]
     assert sql.startswith("INSERT INTO predictions")
     assert image_path in params
-    
+
     # Verify exec_time_ms is an integer and matches milliseconds conversion
     exec_time_ms = params[1]
     assert isinstance(exec_time_ms, int)
@@ -128,7 +129,7 @@ def test_upload_image_to_s3_returns_expected_path(mock_connect, mock_boto_client
     mock_cursor = MagicMock()
     mock_connect.return_value.__enter__.return_value = mock_conn
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
-    
+
     fake_run_id = uuid.uuid4().hex
     logger = PredictionLogger()
     logger.s3_config = {
@@ -136,7 +137,7 @@ def test_upload_image_to_s3_returns_expected_path(mock_connect, mock_boto_client
         "access_key": "fake",
         "secret_key": "fake",
         "region": "us-east-1",
-        "bucket": "test-bucket"
+        "bucket": "test-bucket",
     }
 
     result_path = logger.upload_image_to_s3(dummy_image, run_id=fake_run_id)

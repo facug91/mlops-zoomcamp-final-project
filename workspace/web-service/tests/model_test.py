@@ -1,8 +1,9 @@
+from unittest.mock import MagicMock, patch
+
 import pytest
 import torch
-from services.model import ModelService
 from PIL import Image
-from unittest.mock import patch, MagicMock
+from services.model import ModelService
 
 
 @pytest.fixture

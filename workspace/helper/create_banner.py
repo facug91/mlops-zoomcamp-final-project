@@ -1,8 +1,8 @@
-from PIL import Image
 import matplotlib.pyplot as plt
+from PIL import Image
 
 fruit_types = ["apple", "banana", "grape", "strawberry", "mango"]
-images_paths = [ f"./fruit_images/{fruit}.jpg" for fruit in fruit_types ]
+images_paths = [f"./fruit_images/{fruit}.jpg" for fruit in fruit_types]
 
 image_size = (256, 256)  # Tamaño uniforme para todas las imágenes
 
@@ -12,7 +12,7 @@ axes = axes.flatten()
 for ax, img_path, fruit_type in zip(axes, images_paths, fruit_types):
     img = Image.open(img_path).convert("RGB")
     img = img.resize(image_size)
-    
+
     ax.imshow(img)
     ax.set_title(fruit_type, fontsize=8)
     ax.axis("off")
