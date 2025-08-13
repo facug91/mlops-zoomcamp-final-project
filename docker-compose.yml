@@ -14,8 +14,8 @@ services:
 
   mlflow:
     build:
-      context: .
       dockerfile: docker/Dockerfile-mlflow
+      context: .
     container_name: mlflow-server
     environment:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
@@ -43,6 +43,7 @@ services:
       - PREFECT_SERVER_API_HOST=0.0.0.0
       - PREFECT_API_SERVICES_FLOW_RUN_NOTIFICATIONS_ENABLED=false
     command: ["prefect", "server", "start"]
+    profiles: ["dev"]
 
   postgres:
     image: postgres:latest
@@ -65,25 +66,63 @@ services:
       - postgres
 
   ml-dev-env:
-    extends:
-      file: docker/template.yml
-      service: ml-env
     build:
-      dockerfile: docker/Dockerfile
-      context: docker/
+      dockerfile: Dockerfile
+      context: ./docker/${ARCH}
       args:
         ENV: "dev"
-    container_name: ghcr.io/facug91/ml-dev-env:latest
+    container_name: ml-dev-env-${ARCH}
+    shm_size: '10gb'
+    ports:
+      - "8080:8080"    # Web Service
+    restart: unless-stopped
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ./workspace:/root/workspace
+      - ./.bash_history:/root/.bash_history
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_DEFAULT_REGION=us-east-1
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - TORCH_HOME=/root/workspace/torchvision/cache # torchvision cache folder for pre-trained models
+      - PREFECT_API_URL=http://prefect:4200/api
     profiles: ["dev"]
 
   ml-prod-env:
-    extends:
-      file: docker/template.yml
-      service: ml-env
     build:
-      dockerfile: docker/Dockerfile
-      context: docker/
+      dockerfile: Dockerfile
+      context: ./docker/${ARCH}
       args:
         ENV: "prod"
-    container_name: ghcr.io/facug91/ml-prod-env:latest
+    container_name: ml-prod-env-${ARCH}
+    shm_size: '10gb'
+    ports:
+      - "8080:8080"    # Web Service
+    restart: unless-stopped
+    tty: true
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ./workspace:/root/workspace
+      - ./.bash_history:/root/.bash_history
+    environment:
+      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
+      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
+      - AWS_DEFAULT_REGION=us-east-1
+      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
+      - TORCH_HOME=/root/workspace/torchvision/cache # torchvision cache folder for pre-trained models
+      - PREFECT_API_URL=http://prefect:4200/api
     profiles: ["prod"]
