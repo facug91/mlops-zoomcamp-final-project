@@ -8,7 +8,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     container:
-      image: ghcr.io/facug91/mlops-zoomcamp-final-project/ml-dev-env-cpu:latest
+      image: ghcr.io/facug91/ml-dev-env-cpu:latest
     steps:
       - uses: actions/checkout@v3
       - name: Run tests
