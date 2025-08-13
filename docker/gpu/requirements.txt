@@ -1,14 +1,8 @@
 botocore
 boto3
 numpy
-opencv-python
 mlflow
-prefect
-pytest
 psycopg2-binary
-jupyter
-scikit-learn
-tqdm
 --extra-index-url https://download.pytorch.org/whl/cu128
 torch
 torchvision

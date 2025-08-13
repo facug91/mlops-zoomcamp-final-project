@@ -1,4 +1,4 @@
-FROM nvidia/cuda:12.8.1-cudnn-devel-ubuntu24.04
+FROM ubuntu:24.04
 
 # Prevent interactive prompts
 ENV DEBIAN_FRONTEND=noninteractive
@@ -8,8 +8,6 @@ ENV TZ=Etc/UTC
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     curl \
-    git \
-    openssh-server \
     python3 \
     python3-pip \
     python3-venv \
@@ -25,8 +23,14 @@ RUN python3 -m venv $VENV_PATH
 ENV PATH="$VENV_PATH/bin:$PATH"
 
 # Copy requirements and install
-COPY requirements-dev.txt requirements.txt
-RUN pip install --upgrade pip && pip install -r requirements.txt
+RUN pip install --upgrade pip
+
+COPY requirements.txt requirements.txt
+RUN pip install -r requirements.txt
+
+COPY requirements-dev.txt requirements-dev.txt
+ARG ENV
+RUN if [ "$ENV" = "dev" ]; then pip install -r requirements-dev.txt; fi
 
 # Set working directory and assign ownership
 WORKDIR /root/workspace
@@ -35,7 +39,4 @@ WORKDIR /root/workspace
 EXPOSE 8888
 
 # Configure prefect server url
-RUN prefect config set PREFECT_API_URL=${PREFECT_API_URL}
-
-# Start SSH and Jupyter notebook
-CMD ["/bin/bash", "-c", "exec jupyter notebook --allow-root --ip=0.0.0.0 --port=8888 --no-browser --NotebookApp.token=''"]
+RUN if [ "$ENV" = "dev" ]; then prefect config set PREFECT_API_URL=${PREFECT_API_URL}; fi

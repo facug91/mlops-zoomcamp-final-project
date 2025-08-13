@@ -15,7 +15,7 @@ services:
   mlflow:
     build:
       context: .
-      dockerfile: Dockerfile-mlflow
+      dockerfile: docker/Dockerfile-mlflow
     container_name: mlflow-server
     environment:
       - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
@@ -64,31 +64,26 @@ services:
     depends_on:
       - postgres
 
-  ml-env:
+  ml-dev-env:
+    extends:
+      file: docker/template.yml
+      service: ml-env
     build:
-      context: .
-      dockerfile: Dockerfile-dev
-    container_name: ml-env
-    shm_size: '10gb'
-    ports:
-      - "8888:8888"    # Jupyter
-      - "2222:22"      # SSH
-      - "8080:8080"    # Web Service
-    restart: unless-stopped
-    tty: true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    volumes:
-      - ./workspace:/root/workspace
-    environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - AWS_DEFAULT_REGION=us-east-1
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - TORCH_HOME=/root/workspace/torchvision/cache # torchvision cache folder for pre-trained models
-      - PREFECT_API_URL=http://prefect:4200/api
+      dockerfile: docker/Dockerfile
+      context: docker/
+      args:
+        ENV: "dev"
+    container_name: ghcr.io/facug91/ml-dev-env:latest
+    profiles: ["dev"]
+
+  ml-prod-env:
+    extends:
+      file: docker/template.yml
+      service: ml-env
+    build:
+      dockerfile: docker/Dockerfile
+      context: docker/
+      args:
+        ENV: "prod"
+    container_name: ghcr.io/facug91/ml-prod-env:latest
+    profiles: ["prod"]

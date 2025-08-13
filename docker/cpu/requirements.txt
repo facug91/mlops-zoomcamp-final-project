@@ -1,0 +1,7 @@
+botocore
+boto3
+numpy
+mlflow
+psycopg2-binary
+torch
+torchvision
