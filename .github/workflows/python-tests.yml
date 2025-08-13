@@ -1,0 +1,16 @@
+name: Run Python Tests
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/facug91/mlops-zoomcamp-final-project/ml-dev-env-cpu:latest
+    steps:
+      - uses: actions/checkout@v3
+      - name: Run tests
+        run: |
+          pytest -v workspace/web-service/tests/model_test.py workspace/web-service/tests/prediction_logger_test.py
