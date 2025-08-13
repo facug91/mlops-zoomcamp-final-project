@@ -33,7 +33,7 @@ class ModelService:
                 ),
             ]
         )
-        self.class_index = class_index or {0: "Apple", 1: "Banana", 2: "Grape", 3: "Mango", 4: "Strawberry"}
+        self.class_index = class_index or {0: "apple", 1: "banana", 2: "grape", 3: "mango", 4: "strawberry"}
         if model_name is not None:  # Useful for unit tests
             self.model_name = model_name
             self.model_path = f"/root/workspace/models/{model_name}_weights.pth"
