@@ -4,6 +4,8 @@
 
 This repository contains the final project for the [MLOps Zoomcamp](https://github.com/DataTalksClub/mlops-zoomcamp)
 
+[![Run Python Tests](https://github.com/facug91/mlops-zoomcamp-final-project/actions/workflows/python-tests.yml/badge.svg)](https://github.com/facug91/mlops-zoomcamp-final-project/actions/workflows/python-tests.yml)
+
 ## Project: Fruits Classification
 
 ![Fruits example](./images/fruit_banner.png)
