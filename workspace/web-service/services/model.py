@@ -1,10 +1,16 @@
+import os
 from typing import List, Tuple
 
+import mlflow.pytorch
 import numpy as np
 import torch
 import torch.nn as nn
 from PIL import Image
 from torchvision import models, transforms
+
+import mlflow
+
+MLFLOW_URL = os.getenv("MLFLOW_URL", "http://mlflow:5000")
 
 
 class ModelService:
@@ -13,7 +19,7 @@ class ModelService:
     preprocessing images, performing inference, and returning predictions.
     """
 
-    def __init__(self, model_name: str = "mobilenet_v3_small", class_index: dict = None):
+    def __init__(self, class_index: dict = None):
         """
         Initialize the model and image transform pipeline.
 
@@ -34,10 +40,7 @@ class ModelService:
             ]
         )
         self.class_index = class_index or {0: "apple", 1: "banana", 2: "grape", 3: "mango", 4: "strawberry"}
-        if model_name is not None:  # Useful for unit tests
-            self.model_name = model_name
-            self.model_path = f"/root/workspace/models/{model_name}_weights.pth"
-            self.model = self._load_model()
+        self.model = self._load_model()
 
     def _load_model(self) -> nn.Module:
         """
@@ -46,27 +49,40 @@ class ModelService:
         Returns:
             torch.nn.Module: The model ready for inference.
         """
-        if self.model_name == "mobilenet_v3_small":
-            model = models.mobilenet_v3_small()
-            in_features = model.classifier[3].in_features
-            model.classifier[3] = nn.Sequential(
-                nn.Linear(in_features, 256),
-                nn.ReLU(),
-                nn.Dropout(0.4),
-                nn.Linear(256, len(self.class_index)),
-            )
-        else:
-            model = models.resnet50()
-            model.fc = nn.Sequential(
-                nn.Linear(model.fc.in_features, 256),
-                nn.ReLU(),
-                nn.Dropout(0.4),
-                nn.Linear(256, len(self.class_index)),
-            )
-        model.load_state_dict(torch.load(self.model_path, map_location=self.device))
-        model.to(self.device)
-        model.eval()
-        return model
+        self.model_path = os.getenv("MODEL_LOCATION")
+        if self.model_path is not None:
+            if "mobilenet_v3_small" in self.model_path:
+                model = models.mobilenet_v3_small()
+                in_features = model.classifier[3].in_features
+                model.classifier[3] = nn.Sequential(
+                    nn.Linear(in_features, 256),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(256, len(self.class_index)),
+                )
+            elif "resnet50" in self.model_path:
+                model = models.resnet50()
+                model.fc = nn.Sequential(
+                    nn.Linear(model.fc.in_features, 256),
+                    nn.ReLU(),
+                    nn.Dropout(0.4),
+                    nn.Linear(256, len(self.class_index)),
+                )
+            else:
+                raise ValueError("Unsupported model type. Please use a ResNet50 or MobileNetV3 model.")
+
+            model.load_state_dict(torch.load(self.model_path, map_location=self.device))
+            model.to(self.device)
+            model.eval()
+            return model
+
+        self.model_path = os.getenv("MODEL_MLFLOW_URI")
+        if self.model_path is not None:
+            mlflow.set_tracking_uri(MLFLOW_URL)
+            return mlflow.pytorch.load_model(self.model_path).to(self.device)
+
+        print("Model location not set. Please set MODEL_LOCATION or MODEL_MLFLOW_URI environment variable.")
+        return None
 
     def preprocess(self, image: Image.Image) -> torch.Tensor:
         """

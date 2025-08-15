@@ -1,6 +1,6 @@
+import argparse
 import json
 import os
-import sys
 import time
 
 import mlflow.pytorch
@@ -16,15 +16,15 @@ from tqdm import tqdm
 import mlflow
 from prefect import flow, task
 
-MLFLOW_URL = "http://mlflow:5000"
-MLFLOW_EXPERIMENT = "fruits-classifier"
+MLFLOW_URL = os.getenv("MLFLOW_URL", "http://mlflow:5000")
+MLFLOW_EXPERIMENT = os.getenv("MLFLOW_EXPERIMENT", "fruits-classifier")
 
 
 def configure_mlflow():
     print("MLFlow remote server: ", MLFLOW_URL)
     print("MLFlow experiment name: ", MLFLOW_EXPERIMENT)
-    mlflow.set_tracking_uri("http://mlflow:5000")
-    mlflow.set_experiment("fruits-classifier")
+    mlflow.set_tracking_uri(MLFLOW_URL)
+    mlflow.set_experiment(MLFLOW_EXPERIMENT)
 
 
 @task(log_prints=True)
@@ -291,7 +291,7 @@ def training_flow(model_name="mobilenet_v3_small"):
 
         model = initialize_model(model_name, num_classes)
 
-        model = train_model(model, model_name, device, dataloaders, num_epochs=20)
+        model = train_model(model, model_name, device, dataloaders, num_epochs=10)
 
         eval(model, device, dataloaders, class_names)
 
@@ -299,4 +299,13 @@ def training_flow(model_name="mobilenet_v3_small"):
 
 
 if __name__ == "__main__":
-    training_flow(sys.argv[1])
+    parser = argparse.ArgumentParser(description="Train a model for fruit classification using MLflow and Prefect.")
+    parser.add_argument(
+        "--model-name",
+        choices=["mobilenet_v3_small", "resnet50"],
+        required=True,
+        help="Name of the model to be trained.",
+    )
+
+    args = parser.parse_args()
+    training_flow(args.model_name)

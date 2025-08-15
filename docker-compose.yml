@@ -24,7 +24,7 @@ services:
     volumes:
       - ./mlflow:/mlruns
     ports:
-      - "5000:5000"
+      - "5000:5000" # MLflow UI
     depends_on:
       - minio
     command: ["mlflow", "server", "--host", "0.0.0.0", "--port", "5000", "--backend-store-uri", "sqlite:////mlruns/mlruns.db", "--serve-artifacts","--default-artifact-root", "s3://mlflow-artifacts", "--artifacts-destination", "s3://mlflow-artifacts"]
@@ -33,7 +33,7 @@ services:
     image: prefecthq/prefect:3.4.9-python3.12
     container_name: prefect-server
     ports:
-      - "4200:4200"
+      - "4200:4200" # Prefect UI and API
     volumes:
       - ./prefect:/root/.prefect
     environment:
@@ -43,7 +43,7 @@ services:
       - PREFECT_SERVER_API_HOST=0.0.0.0
       - PREFECT_API_SERVICES_FLOW_RUN_NOTIFICATIONS_ENABLED=false
     command: ["prefect", "server", "start"]
-    profiles: ["dev"]
+    profiles: ["dev-cpu", "dev-gpu"]
 
   postgres:
     image: postgres:latest
@@ -65,49 +65,28 @@ services:
     depends_on:
       - postgres
 
-  ml-dev-env:
-    build:
-      dockerfile: Dockerfile
-      context: ./docker/${ARCH}
-      args:
-        ENV: "dev"
-    container_name: ml-dev-env-${ARCH}
-    shm_size: '10gb'
-    ports:
-      - "8080:8080"    # Web Service
-    restart: unless-stopped
-    tty: true
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
+  ml-dev-env-cpu:
+    extends:
+      file: docker/templates.yml
+      service: ml-env
+    image: ghcr.io/facug91/ml-dev-env-cpu:latest
+    container_name: ml-dev-env-cpu
     volumes:
       - ./workspace:/root/workspace
       - ./.bash_history:/root/.bash_history
-    environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - AWS_DEFAULT_REGION=us-east-1
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - TORCH_HOME=/root/workspace/torchvision/cache # torchvision cache folder for pre-trained models
-      - PREFECT_API_URL=http://prefect:4200/api
-    profiles: ["dev"]
+    depends_on:
+      - minio
+      - mlflow
+      - prefect
+      - postgres
+    profiles: ["dev-cpu"]
 
-  ml-prod-env:
-    build:
-      dockerfile: Dockerfile
-      context: ./docker/${ARCH}
-      args:
-        ENV: "prod"
-    container_name: ml-prod-env-${ARCH}
-    shm_size: '10gb'
-    ports:
-      - "8080:8080"    # Web Service
-    restart: unless-stopped
-    tty: true
+  ml-dev-env-gpu:
+    extends:
+      file: docker/templates.yml
+      service: ml-env
+    image: ghcr.io/facug91/ml-dev-env-gpu:latest
+    container_name: ml-dev-env-gpu
     deploy:
       resources:
         reservations:
@@ -118,11 +97,47 @@ services:
     volumes:
       - ./workspace:/root/workspace
       - ./.bash_history:/root/.bash_history
-    environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - AWS_DEFAULT_REGION=us-east-1
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - TORCH_HOME=/root/workspace/torchvision/cache # torchvision cache folder for pre-trained models
-      - PREFECT_API_URL=http://prefect:4200/api
-    profiles: ["prod"]
+    depends_on:
+      - minio
+      - mlflow
+      - prefect
+      - postgres
+    profiles: ["dev-gpu"]
+
+
+  ml-prod-env-cpu:
+    extends:
+      file: docker/templates.yml
+      service: ml-env
+    image: ghcr.io/facug91/ml-prod-env-cpu:latest
+    container_name: ml-prod-env-cpu
+    volumes:
+      - ./workspace:/root/workspace
+      - ./.bash_history:/root/.bash_history
+    depends_on:
+      - minio
+      - mlflow
+      - postgres
+    profiles: ["prod-cpu"]
+
+  ml-prod-env-gpu:
+    extends:
+      file: docker/templates.yml
+      service: ml-env
+    image: ghcr.io/facug91/ml-prod-env-gpu:latest
+    container_name: ml-prod-env-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    volumes:
+      - ./workspace:/root/workspace
+      - ./.bash_history:/root/.bash_history
+    depends_on:
+      - minio
+      - mlflow
+      - postgres
+    profiles: ["prod-gpu"]
