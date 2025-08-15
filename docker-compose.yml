@@ -65,6 +65,24 @@ services:
     depends_on:
       - postgres
 
+  ml-prod-env-cpu:
+    extends:
+      file: docker/templates.yml
+      service: ml-env
+    image: ghcr.io/facug91/ml-prod-env-cpu:latest
+    container_name: ml-prod-env-cpu
+    ports:
+      - "8080:8080" # Web Service
+    volumes:
+      - ./workspace:/root/workspace
+      - ./.bash_history:/root/.bash_history
+    depends_on:
+      - minio
+      - mlflow
+      - postgres
+    profiles: ["prod-cpu", "dev-cpu"]
+    command: ["flask run", "--host", "0.0.0.0 ","--port",  "8080", "--debug"]
+
   ml-dev-env-cpu:
     extends:
       file: docker/templates.yml
@@ -74,12 +92,39 @@ services:
     volumes:
       - ./workspace:/root/workspace
       - ./.bash_history:/root/.bash_history
+    environment:
+      - WEB_SERVICE_URL=http://ml-prod-env-cpu:8080
     depends_on:
       - minio
       - mlflow
       - prefect
       - postgres
     profiles: ["dev-cpu"]
+
+  ml-prod-env-gpu:
+    extends:
+      file: docker/templates.yml
+      service: ml-env
+    image: ghcr.io/facug91/ml-prod-env-gpu:latest
+    container_name: ml-prod-env-gpu
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    ports:
+      - "8080:8080" # Web Service
+    volumes:
+      - ./workspace:/root/workspace
+      - ./.bash_history:/root/.bash_history
+    depends_on:
+      - minio
+      - mlflow
+      - postgres
+    profiles: ["prod-gpu", "dev-gpu"]
+    command: ["flask run", "--host", "0.0.0.0 ","--port",  "8080", "--debug"]
 
   ml-dev-env-gpu:
     extends:
@@ -97,47 +142,11 @@ services:
     volumes:
       - ./workspace:/root/workspace
       - ./.bash_history:/root/.bash_history
+    environment:
+      - WEB_SERVICE_URL=http://ml-prod-env-gpu:8080
     depends_on:
       - minio
       - mlflow
       - prefect
       - postgres
     profiles: ["dev-gpu"]
-
-
-  ml-prod-env-cpu:
-    extends:
-      file: docker/templates.yml
-      service: ml-env
-    image: ghcr.io/facug91/ml-prod-env-cpu:latest
-    container_name: ml-prod-env-cpu
-    volumes:
-      - ./workspace:/root/workspace
-      - ./.bash_history:/root/.bash_history
-    depends_on:
-      - minio
-      - mlflow
-      - postgres
-    profiles: ["prod-cpu"]
-
-  ml-prod-env-gpu:
-    extends:
-      file: docker/templates.yml
-      service: ml-env
-    image: ghcr.io/facug91/ml-prod-env-gpu:latest
-    container_name: ml-prod-env-gpu
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    volumes:
-      - ./workspace:/root/workspace
-      - ./.bash_history:/root/.bash_history
-    depends_on:
-      - minio
-      - mlflow
-      - postgres
-    profiles: ["prod-gpu"]

@@ -1,9 +1,10 @@
 import io
+import os
 
 import requests
 from PIL import Image
 
-BASE_URL = "http://localhost:8080"
+BASE_URL = os.getenv("WEB_SERVICE_URL", "http://localhost:8080")
 VALID_LABELS = {"apple", "banana", "mango", "strawberry", "grape"}
 
 

@@ -2,8 +2,6 @@ services:
 
   ml-env:
     shm_size: '10gb'
-    ports:
-      - "8080:8080" # Web Service
     restart: unless-stopped
     tty: true
     environment:
