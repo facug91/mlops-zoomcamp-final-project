@@ -21,7 +21,7 @@ def service():
     Fixture: Returns a ModelService instance without loading a model.
     This avoids slow I/O and GPU usage during tests.
     """
-    return ModelService(model_name=None)
+    return ModelService()
 
 
 def test_preprocess_shape_and_range(service, dummy_image):
