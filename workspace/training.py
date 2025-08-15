@@ -276,7 +276,7 @@ def training_flow(model_name="mobilenet_v3_small"):
 
     configure_mlflow()
 
-    data_dir = "./data/fruits_dataset"
+    data_dir = "./data/fruits-dataset"
 
     with mlflow.start_run():
 
