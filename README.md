@@ -206,6 +206,20 @@ The training script allows you to train a fruit classification model using eithe
   python training.py --model-name resnet50
   ```
 
+### Monitoring training
+
+In the training process, `prefect` is used as workflow orchestrator, which can be used to monitore the training process:
+
+![Prefect Run](images/prefect.png)
+
+Also MLflow is used for experiment tracking:
+
+![MLflow Experiment Tracking](images/mlflow_experiment_tracking.png)
+
+And trained models are register in the MLflow model registry:
+
+![MLflow Model Registry](images/mlflow_model_registry.png)
+
 ### Output
 
 The trained models are stored in the `workspace/models` directory.
