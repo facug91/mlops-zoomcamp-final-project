@@ -84,7 +84,7 @@ services:
       - mlflow
       - postgres
     profiles: ["prod-cpu"]
-    command: "/opt/venv/bin/python3 -m flask run --host 0.0.0.0 --port 8080"
+    command: "/opt/venv/bin/python3 -m gunicorn --bind 0.0.0.0:8080 app:app"
 
   ml-dev-env-cpu:
     extends:
@@ -129,7 +129,7 @@ services:
       - mlflow
       - postgres
     profiles: ["prod-gpu"]
-    command: "/opt/venv/bin/python3 -m flask run --host 0.0.0.0 --port 8080 --debug"
+    command: "/opt/venv/bin/python3 -m gunicorn --bind 0.0.0.0:8080 app:app"
 
   ml-dev-env-gpu:
     extends:

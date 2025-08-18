@@ -32,6 +32,8 @@ RUN pip install -r requirements.txt
 COPY requirements-dev.txt requirements-dev.txt
 ARG ENV
 RUN if [ "$ENV" = "dev" ]; then pip install -r requirements-dev.txt; fi
+COPY requirements-prod.txt requirements-prod.txt
+RUN if [ "$ENV" = "prod" ]; then pip install -r requirements-prod.txt; fi
 
 # Set working directory and assign ownership
 WORKDIR /root/workspace
