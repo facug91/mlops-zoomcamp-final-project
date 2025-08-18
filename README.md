@@ -300,3 +300,66 @@ Integration tests validate the complete flow of the web service, including the F
 - They verify:
   - That predictions return a valid label and probability.
   - That invalid requests (e.g., missing or corrupted images) are handled correctly.
+
+
+## Running the Web Service in Production Mode
+
+The web service is built with **Flask** and served in production using **Gunicorn**.  
+It exposes two endpoints:
+
+- `/predict`: HTTP POST endpoint that receives an image and returns a JSON prediction.  
+- `/`: Home endpoint that serves a simple HTML page.
+
+### Starting the service
+
+The production service is launched automatically when using Docker Compose with a production profile:
+
+**CPU mode**
+  ```bash
+  docker compose --profile prod-cpu up
+  ```
+
+**GPU mode**
+  ```bash
+  docker compose --profile prod-gpu up
+  ```
+
+Internally, the service runs with Gunicorn:
+  ```bash
+  /opt/venv/bin/python3 -m gunicorn --bind 0.0.0.0:8080 app:app
+  ```
+
+### Environment variables
+
+Configuration is provided through a .env file located in the repository. The repo already includes an example .env file with default values.
+
+This file defines the credentials for:
+- PostgreSQL, used to store prediction logs.
+- MinIO (S3-compatible), used to store uploaded images.
+- MLflow, used to load models from the Model Registry (in case disk models are not configured).
+
+### Testing the service
+
+Once the service is up, you can access the home page in http://localhost:8080/:
+
+![Web Service Home Page](images/home_page.png)
+
+You can also use the endpoint http://localhost:8080/predict to send an image, and receive a json response:
+  ```json
+  {
+    "predictions": {
+      "label": "banana",
+      "prob": 0.987
+    }
+  }
+  ```
+- `label`: predicted fruit class (one of: apple, banana, mango, strawberry, grape).
+- `prob`: confidence score, between 0 and 1.
+
+
+## Monitoring the Web Service
+
+The web service store data about every execution in a postgres, which can be checked with Adminer in http://localhost:8081/:
+
+![alt text](images/adminer.png)
+
