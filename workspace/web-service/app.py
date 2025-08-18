@@ -32,7 +32,8 @@ def predict():
         exec_time_sec = end_time - start_time
 
         image_path = prediction_logger.upload_image_to_s3(image, uuid.uuid4().hex)
-        prediction_logger.save_to_db(predictions, exec_time_sec, image_path)
+        width, height = image.size
+        prediction_logger.save_to_db(predictions, exec_time_sec, image_path, width, height)
 
         label, prob = predictions[0]
         result = {"label": label, "prob": prob}

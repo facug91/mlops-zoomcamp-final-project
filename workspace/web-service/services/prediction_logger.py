@@ -44,6 +44,10 @@ class PredictionLogger:
                 timestamp TIMESTAMP NOT NULL,
                 image_path TEXT,
                 exec_time_ms INTEGER NOT NULL,
+                width INT,
+                height INT,
+                predicted_label VARCHAR(50) NOT NULL,
+                predicted_confidence FLOAT NOT NULL,
                 apple FLOAT,
                 banana FLOAT,
                 grape FLOAT,
@@ -57,7 +61,9 @@ class PredictionLogger:
                 cur.execute(create_table_statement)
                 conn.commit()
 
-    def save_to_db(self, predictions: List[Tuple[str, float]], duration: float, image_path: str):
+    def save_to_db(
+        self, predictions: List[Tuple[str, float]], duration: float, image_path: str, width: int, height: int
+    ):
         """
         Save predictions to the database.
 
@@ -70,9 +76,20 @@ class PredictionLogger:
         timestamp = datetime.datetime.now(datetime.UTC)
         exec_time_ms = int(duration * 1000.0)
         confidence_dict = {label.lower(): confidence for label, confidence in predictions}
+        predicted_label, predicted_confidence = max(predictions, key=lambda item: item[1])
 
-        columns = ["timestamp", "exec_time_ms", "image_path"] + list(confidence_dict.keys())
-        values = [timestamp, exec_time_ms, image_path] + list(confidence_dict.values())
+        columns = [
+            "timestamp",
+            "exec_time_ms",
+            "image_path",
+            "width",
+            "height",
+            "predicted_label",
+            "predicted_confidence",
+        ] + list(confidence_dict.keys())
+        values = [timestamp, exec_time_ms, image_path, width, height, predicted_label, predicted_confidence] + list(
+            confidence_dict.values()
+        )
 
         placeholders = ", ".join(["%s"] * len(values))
         columns_str = ", ".join(columns)

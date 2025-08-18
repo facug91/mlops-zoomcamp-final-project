@@ -4,14 +4,22 @@ services:
     shm_size: '10gb'
     restart: unless-stopped
     tty: true
+    ports:
+      - "8080:8080" # Web Service
     environment:
-      - AWS_ACCESS_KEY_ID=${MINIO_ROOT_USER}
-      - AWS_SECRET_ACCESS_KEY=${MINIO_ROOT_PASSWORD}
-      - AWS_DEFAULT_REGION=us-east-1
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
       - TORCH_HOME=/root/workspace/torchvision/cache # Torchvision cache folder for pre-trained models
-      - PREFECT_API_URL=http://prefect:4200/api
-      - MLFLOW_URL=http://mlflow:5000
+      - PREFECT_API_URL=${PREFECT_API_URL}
+      - MLFLOW_URL=${MLFLOW_URL}
       - MODEL_LOCATION=/root/workspace/models/mobilenet_v3_small_weights.pth
       - MODEL_MLFLOW_URI="models:/MNISTClassifier/Production" # Only used if MODEL_LOCATION is not set
       - MLFLOW_EXPERIMENT=fruits-classifier
+      - DB_HOST=${POSTGRES_HOST}
+      - DB_PORT=${POSTGRES_PORT}
+      - DB_NAME=${POSTGRES_DB_NAME}
+      - DB_USER=${POSTGRES_USER}
+      - DB_PASSWORD=${POSTGRES_PASSWORD}
+      - S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - AWS_DEFAULT_REGION=${AWS_DEFAULT_REGION}
+      - S3_BUCKET=${WEB_SERVICE_BUCKET}

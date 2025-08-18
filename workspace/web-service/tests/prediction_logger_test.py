@@ -59,8 +59,9 @@ def test_save_to_db_inserts_correct_values(mock_connect):
     predictions = [("Apple", 0.8), ("Banana", 0.05), ("Grape", 0.05), ("Banana", 0.05), ("Mango", 0.05)]
     duration = 1.234
     image_path = "s3://bucket/predictions/test.jpg"
+    width, height = 1280, 720
 
-    logger.save_to_db(predictions, duration, image_path)
+    logger.save_to_db(predictions, duration, image_path, width, height)
 
     # Ensure an INSERT was executed
     assert mock_cursor.execute.call_count == 2
@@ -87,11 +88,12 @@ def test_save_to_db_contains_expected_fruit_columns(mock_connect):
     mock_conn.cursor.return_value.__enter__.return_value = mock_cursor
 
     logger = PredictionLogger()
-    predictions = [("Apple", 0.7), ("Mango", 0.15), ("Strawberry", 0.05), ("Banana", 0.05), ("Mango", 0.05)]
+    predictions = [("apple", 0.7), ("mango", 0.15), ("strawberry", 0.05), ("banana", 0.05), ("mango", 0.05)]
     duration = 0.5
     image_path = "s3://bucket/predictions/test2.jpg"
+    width, height = 1280, 720
 
-    logger.save_to_db(predictions, duration, image_path)
+    logger.save_to_db(predictions, duration, image_path, width, height)
 
     # Get the SQL string used in the INSERT
     sql, params = mock_cursor.execute.call_args[0]

@@ -1,8 +1,9 @@
-botocore
-boto3
-numpy
-mlflow
-psycopg2-binary
+botocore==1.40.7
+boto3==1.40.7
+numpy==2.3.2
+mlflow==3.2.0
+psycopg2-binary==2.9.10
+flask==3.1.1
 --extra-index-url https://download.pytorch.org/whl/cpu
-torch
-torchvision
+torch==2.8.0+cpu
+torchvision==0.23.0+cpu

@@ -3,8 +3,8 @@ services:
   minio:
     image: quay.io/minio/minio:RELEASE.2025-07-23T15-54-02Z
     environment:
-      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
-      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      MINIO_ROOT_USER: ${AWS_ACCESS_KEY_ID}
+      MINIO_ROOT_PASSWORD: ${AWS_SECRET_ACCESS_KEY}
     ports:
       - "9000:9000"  # API S3
       - "9001:9001"  # Consola web
@@ -18,9 +18,9 @@ services:
       context: .
     container_name: mlflow-server
     environment:
-      - MLFLOW_S3_ENDPOINT_URL=http://minio:9000
-      - AWS_ACCESS_KEY_ID=${MLFLOW_S3_ACCESS_KEY}
-      - AWS_SECRET_ACCESS_KEY=${MLFLOW_S3_SECRET_KEY}
+      - MLFLOW_S3_ENDPOINT_URL=${S3_ENDPOINT_URL}
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
     volumes:
       - ./mlflow:/mlruns
     ports:
@@ -51,7 +51,7 @@ services:
     environment:
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
-      - POSTGRES_DB=metricsdb
+      - POSTGRES_DB=${POSTGRES_DB_NAME}
     ports:
       - "5432:5432"
     volumes:
@@ -71,17 +71,20 @@ services:
       service: ml-env
     image: ghcr.io/facug91/ml-prod-env-cpu:latest
     container_name: ml-prod-env-cpu
-    ports:
-      - "8080:8080" # Web Service
     volumes:
-      - ./workspace:/root/workspace
+      - ./workspace/web-service:/root/workspace
       - ./.bash_history:/root/.bash_history
+    working_dir: /root/workspace
+    environment:
+      - WEB_SERVICE_URL=http://localhost:8080
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
     depends_on:
       - minio
       - mlflow
       - postgres
-    profiles: ["prod-cpu", "dev-cpu"]
-    command: ["flask run", "--host", "0.0.0.0 ","--port",  "8080", "--debug"]
+    profiles: ["prod-cpu"]
+    command: "/opt/venv/bin/python3 -m flask run --host 0.0.0.0 --port 8080"
 
   ml-dev-env-cpu:
     extends:
@@ -92,8 +95,7 @@ services:
     volumes:
       - ./workspace:/root/workspace
       - ./.bash_history:/root/.bash_history
-    environment:
-      - WEB_SERVICE_URL=http://ml-prod-env-cpu:8080
+    working_dir: /root/workspace
     depends_on:
       - minio
       - mlflow
@@ -114,17 +116,20 @@ services:
             - driver: nvidia
               count: all
               capabilities: [gpu]
-    ports:
-      - "8080:8080" # Web Service
     volumes:
-      - ./workspace:/root/workspace
+      - ./workspace/web-service:/root/workspace
       - ./.bash_history:/root/.bash_history
+    working_dir: /root/workspace
+    environment:
+      - WEB_SERVICE_URL=http://localhost:8080
+      - FLASK_ENV=production
+      - FLASK_APP=app.py
     depends_on:
       - minio
       - mlflow
       - postgres
-    profiles: ["prod-gpu", "dev-gpu"]
-    command: ["flask run", "--host", "0.0.0.0 ","--port",  "8080", "--debug"]
+    profiles: ["prod-gpu"]
+    command: "/opt/venv/bin/python3 -m flask run --host 0.0.0.0 --port 8080 --debug"
 
   ml-dev-env-gpu:
     extends:
@@ -142,8 +147,7 @@ services:
     volumes:
       - ./workspace:/root/workspace
       - ./.bash_history:/root/.bash_history
-    environment:
-      - WEB_SERVICE_URL=http://ml-prod-env-gpu:8080
+    working_dir: /root/workspace
     depends_on:
       - minio
       - mlflow
