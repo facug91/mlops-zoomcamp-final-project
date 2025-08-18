@@ -213,8 +213,8 @@ minio/
 mlflow/
 prefect/
 pgdata/
+workspace/models
 **/data/
 **/metrics/
 **/mlruns/
-**/models/
 **/torchvision/
