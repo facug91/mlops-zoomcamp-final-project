@@ -101,6 +101,11 @@ Development images (`ENV=dev`) also include extra dependencies for debugging and
   - [scikit-learn](https://scikit-learn.org/stable/)
   - [tqdm](https://tqdm.github.io/)
 
+Production images (`ENV=prod`) also include extra dependencies for the web service.
+
+- **HTTP Server**
+  - [Gunicorn](https://gunicorn.org/)
+
 ### **Building the CPU image**
 
 ```bash
