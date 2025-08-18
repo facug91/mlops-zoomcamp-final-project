@@ -12,6 +12,7 @@ services:
       - MLFLOW_URL=${MLFLOW_URL}
       - MODEL_LOCATION=/root/workspace/models/mobilenet_v3_small_weights.pth
       - MODEL_MLFLOW_URI="models:/fruits-classifier-mobilenet_v3_small/Production" # Only used if MODEL_LOCATION is not set
+      - MLFLOW_S3_ENDPOINT_URL=${MLFLOW_S3_ENDPOINT_URL}
       - MLFLOW_EXPERIMENT=fruits-classifier
       - DB_HOST=${POSTGRES_HOST}
       - DB_PORT=${POSTGRES_PORT}
