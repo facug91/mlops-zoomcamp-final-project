@@ -1,10 +1,9 @@
-
-
 # MLOps Zoomcamp Final Project 2025
 
 This repository contains the final project for the [MLOps Zoomcamp](https://github.com/DataTalksClub/mlops-zoomcamp)
 
 [![Run Unit Tests](https://github.com/facug91/mlops-zoomcamp-final-project/actions/workflows/python-tests.yml/badge.svg)](https://github.com/facug91/mlops-zoomcamp-final-project/actions/workflows/python-tests.yml)
+
 
 ## Project: Fruits Classification
 
@@ -47,6 +46,7 @@ This repository contains the complete workflow for training, deploying, and serv
   - Docker-based containerization for reproducible environments.
   - GitHub Actions for CI pipeline execution and testing.
   - Modular architecture separating model logic, metrics storage, and API service.
+
 
 ## Building Docker Images
 
@@ -127,6 +127,7 @@ docker build \
   ./docker/gpu
 ```
 
+
 ## Running the Development or Production Environment
 
 This project uses [Docker Compose](https://docs.docker.com/compose/) to manage all services, with support for **profiles** to choose which environment to start.
@@ -135,10 +136,10 @@ This project uses [Docker Compose](https://docs.docker.com/compose/) to manage a
 
 The `docker-compose.yml` defines multiple profiles so you can choose what environment to run:
 
-- `prod-cpu` → Production environment (CPU version)
-- `prod-gpu` → Production environment (GPU version, requires NVIDIA GPU)
-- `dev-cpu` → Development environment (CPU version) (includes production environment)
-- `dev-gpu` → Development environment (GPU version, requires NVIDIA GPU) (includes production environment)
+- `prod-cpu`: Production environment (CPU version)
+- `prod-gpu`: Production environment (GPU version, requires NVIDIA GPU)
+- `dev-cpu`: Development environment (CPU version)
+- `dev-gpu`: Development environment (GPU version, requires NVIDIA GPU)
 
 ### Starting the environment
 
@@ -160,3 +161,128 @@ When running a dev-* profile, you can attach VS Code to the development containe
   - For CPU dev: ml-dev-env-cpu
 
 Once attached, you can run scripts inside the container, from the /workspace directory.
+
+
+## Preparing the Dataset
+
+The dataset is downloaded and prepared using the script `prepare_dataset.py`.  
+This step only needs to be done **once**, since it always downloads the same dataset.
+
+### Steps
+
+1. Attach to the development container (e.g., `ml-dev-env-cpu` or `ml-dev-env-gpu`) using VS Code Dev Containers or `docker exec`.
+
+2. In workspace folder run the dataset preparation script:
+  ```bash
+  python prepare_dataset.py
+  ```
+
+### What the script does
+
+- Downloads the dataset archive from Kaggle.
+- Extracts the files into a temporary folder.
+- Creates the final dataset structure under `workspace/data/fruits-dataset`.
+- Renames the validation folder from `valid` to `val`.
+
+After running this step, you will have a ready-to-use dataset in `workspace/data/fruits-dataset`.
+
+
+## Training the Classification Model
+
+The training script allows you to train a fruit classification model using either **MobileNetV3-Small** or **ResNet50**.
+
+### Steps
+
+1. Attach to the development container (`ml-dev-env-cpu` or `ml-dev-env-gpu`).
+
+2. In workspace folder run the training script with the model of your choice:
+
+  **Train MobileNetV3-Small (recommended for CPU):**
+  ```bash
+  python training.py --model-name mobilenet_v3_small
+  ```
+  **Train ResNet50 (larger, better suited for GPU):**
+  ```bash
+  python training.py --model-name resnet50
+  ```
+
+### Output
+
+The trained models are stored in the `workspace/models` directory.
+
+Two pre-trained models (mobilenet_v3_small and resnet50) are already included under workspace/web-service/models in this repository. This allows you to skip training and test the web service directly.
+
+
+## Moving the Classification Model to Production with MLflow model registry
+
+The models are store in the model registry when you train them, without any stage. To move a model to stage `Production`, you can use the script model_to_production, specifying the name of the model. The model with the highest accuracy will be the one moved.
+
+### Steps
+
+1. Attach to the development container (`ml-dev-env-cpu` or `ml-dev-env-gpu`).
+
+2. In workspace folder run the script to move the best model:
+
+  **Move MobileNetV3-Small:**
+  ```bash
+  python prepare_dataset.py --model-name mobilenet_v3_small
+  ```
+  **Move ResNet50:**
+  ```bash
+  python prepare_dataset.py --model-name resnet50
+  ```
+
+Then you can use the model like this `mlflow.pytorch.load_model("models:/fruits-classifier-mobilenet_v3_small/Production")`.
+
+
+## Running Unit Tests
+
+Unit tests validate the core logic of the web service in isolation, without requiring external services such as PostgreSQL or MinIO (these dependencies are mocked).
+
+### Steps
+
+1. Attach to the development container (`ml-dev-env-cpu` or `ml-dev-env-gpu`).
+
+2. Navigate to the unit test folder:
+  ```bash
+  cd workspace/web-service/tests
+  ```
+
+3. Run the tests with pytest:
+  ```bash
+  pytest -v model_test.py prediction_logger_test.py
+  ```
+
+**Notes**
+
+- These tests run entirely inside the development container.
+- They do not require any database or S3 storage to be available.
+- Use them to quickly validate changes in the web-service codebase.
+- They are automatically run with github actions.
+
+
+## Running Integration Tests
+
+Integration tests validate the complete flow of the web service, including the Flask API, PostgreSQL database, and S3 storage (MinIO).  
+
+### Steps
+
+1. Attach to the development container (`ml-dev-env-cpu` or `ml-dev-env-gpu`).
+
+2. In one terminal inside the development container, start the Flask web service:
+  ```bash
+  flask run --host 0.0.0.0 --port 8080 --debug
+  ```
+  The --debug flag is recommended during development because it enables auto-reload.
+
+3. Open a second terminal inside the same development container and run the integration tests:
+  ```bash
+  cd /workspace/web-service/integration_tests
+  pytest -v test_predict_live.py
+  ```
+
+**Notes**
+- These tests send real HTTP requests to the running Flask service at http://localhost:8080.
+- They verify:
+  - That predictions return a valid label and probability.
+  - That invalid requests (e.g., missing or corrupted images) are handled correctly.
